@@ -10,7 +10,7 @@ require(["vs/editor/editor.main"], function () {
     monaco.languages.setMonarchTokensProvider("verse", {
         tokenizer: {
             root: [
-                [/\b(module|using|class|fn|if|else|for|return|var|set)\b/, "keyword"],
+                [/\b(module|using|class|fn|if|else|for|return|var|set|override|suspends)\b/, "keyword"],
                 [/[a-zA-Z_]\w*/, "identifier"],
                 [/[{}()\[\]]/, "@brackets"],
                 [/"[^"]*"/, "string"],
@@ -25,6 +25,12 @@ require(["vs/editor/editor.main"], function () {
         theme: "vs-dark",
         automaticLayout: true
     });
+
+    editor.onDidChangeModelContent(() => {
+        validateVerse();
+    });
+
+    validateVerse();
 });
 
 function defaultVerseTemplate() {
@@ -41,6 +47,78 @@ class MainDevice := creative_device:
 function createProject() {
     currentProject = document.getElementById("projectName").value || "MyVerseProject";
     editor.setValue(defaultVerseTemplate());
+}
+
+function validateVerse() {
+    const code = editor.getValue();
+    const markers = [];
+
+    const lines = code.split("\n");
+
+    // Rule 1: Must have module
+    if (!code.includes("module")) {
+        markers.push({
+            message: "Missing module declaration.",
+            severity: monaco.MarkerSeverity.Error,
+            startLineNumber: 1,
+            startColumn: 1,
+            endLineNumber: 1,
+            endColumn: 1
+        });
+    }
+
+    // Rule 2: Must have class
+    if (!code.includes("class")) {
+        markers.push({
+            message: "No class defined in project.",
+            severity: monaco.MarkerSeverity.Error,
+            startLineNumber: 1,
+            startColumn: 1,
+            endLineNumber: 1,
+            endColumn: 1
+        });
+    }
+
+    // Rule 3: Must have OnBegin override
+    if (!code.includes("OnBegin<override>")) {
+        markers.push({
+            message: "Missing required OnBegin<override>() function.",
+            severity: monaco.MarkerSeverity.Warning,
+            startLineNumber: 1,
+            startColumn: 1,
+            endLineNumber: 1,
+            endColumn: 1
+        });
+    }
+
+    // Rule 4: Bracket matching
+    const openBrackets = (code.match(/{/g) || []).length;
+    const closeBrackets = (code.match(/}/g) || []).length;
+
+    if (openBrackets !== closeBrackets) {
+        markers.push({
+            message: "Unmatched curly brackets.",
+            severity: monaco.MarkerSeverity.Error,
+            startLineNumber: lines.length,
+            startColumn: 1,
+            endLineNumber: lines.length,
+            endColumn: 1
+        });
+    }
+
+    // Rule 5: Missing using
+    if (!code.includes("using")) {
+        markers.push({
+            message: "No using statement found.",
+            severity: monaco.MarkerSeverity.Warning,
+            startLineNumber: 1,
+            startColumn: 1,
+            endLineNumber: 1,
+            endColumn: 1
+        });
+    }
+
+    monaco.editor.setModelMarkers(editor.getModel(), "verse", markers);
 }
 
 function downloadProject() {
