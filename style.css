@@ -1,0 +1,17 @@
+body {
+  margin: 0;
+  background: #0f0f0f;
+  color: white;
+  font-family: Arial;
+}
+
+#topbar {
+  padding: 10px;
+  background: #1c1c1c;
+  display: flex;
+  gap: 10px;
+}
+
+#editor {
+  height: calc(100vh - 50px);
+}
