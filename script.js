@@ -101,3 +101,101 @@ function generateAISuggestion(context) {
 
     return "";
 }
+function validateVerse() {
+    const code = editor.getValue();
+    const markers = [];
+    const lines = code.split("\n");
+
+    const validTypes = [
+        "agent",
+        "player",
+        "int",
+        "float",
+        "string",
+        "logic",
+        "void",
+        "creative_device"
+    ];
+
+    lines.forEach((line, index) => {
+        const lineNumber = index + 1;
+
+        // Match function definitions
+        const functionRegex = /^(\w+)\s*\((.*?)\)\s*:\s*(\w+)\s*(.)?$/;
+        const match = line.trim().match(functionRegex);
+
+        if (match) {
+            const functionName = match[1];
+            const params = match[2];
+            const returnType = match[3];
+            const endingChar = match[4];
+
+            // Check return type
+            if (!validTypes.includes(returnType)) {
+                markers.push({
+                    message: `Invalid return type "${returnType}".`,
+                    severity: monaco.MarkerSeverity.Error,
+                    startLineNumber: lineNumber,
+                    startColumn: line.indexOf(returnType) + 1,
+                    endLineNumber: lineNumber,
+                    endColumn: line.indexOf(returnType) + returnType.length + 1
+                });
+            }
+
+            // Check parameters
+            if (params.trim() !== "") {
+                const paramParts = params.split(":");
+
+                if (paramParts.length !== 2) {
+                    markers.push({
+                        message: "Invalid parameter format. Use (name : type).",
+                        severity: monaco.MarkerSeverity.Error,
+                        startLineNumber: lineNumber,
+                        startColumn: 1,
+                        endLineNumber: lineNumber,
+                        endColumn: line.length + 1
+                    });
+                } else {
+                    const paramType = paramParts[1].trim();
+                    if (!validTypes.includes(paramType)) {
+                        markers.push({
+                            message: `Unknown type "${paramType}".`,
+                            severity: monaco.MarkerSeverity.Error,
+                            startLineNumber: lineNumber,
+                            startColumn: line.indexOf(paramType) + 1,
+                            endLineNumber: lineNumber,
+                            endColumn: line.indexOf(paramType) + paramType.length + 1
+                        });
+                    }
+                }
+            }
+
+            // Must end with =
+            if (endingChar !== "=") {
+                markers.push({
+                    message: `Function must end with "=" not "${endingChar || "nothing"}".`,
+                    severity: monaco.MarkerSeverity.Error,
+                    startLineNumber: lineNumber,
+                    startColumn: line.length,
+                    endLineNumber: lineNumber,
+                    endColumn: line.length + 1
+                });
+            }
+        }
+
+        // Detect dash used incorrectly
+        if (line.trim().endsWith("-")) {
+            markers.push({
+                message: `Invalid function terminator "-". Did you mean "="?`,
+                severity: monaco.MarkerSeverity.Error,
+                startLineNumber: lineNumber,
+                startColumn: line.length,
+                endLineNumber: lineNumber,
+                endColumn: line.length + 1
+            });
+        }
+    });
+
+    monaco.editor.setModelMarkers(editor.getModel(), "verse", markers);
+}
+
