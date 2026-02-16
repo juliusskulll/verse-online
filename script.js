@@ -1,5 +1,6 @@
 let editor;
 let currentProject = "MyVerseProject";
+let aiEnabled = true;
 
 require.config({ paths: { vs: "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs" }});
 
@@ -23,14 +24,15 @@ require(["vs/editor/editor.main"], function () {
         value: defaultVerseTemplate(),
         language: "verse",
         theme: "vs-dark",
-        automaticLayout: true
+        automaticLayout: true,
+        inlineSuggest: { enabled: true }
     });
 
-    editor.onDidChangeModelContent(() => {
-        validateVerse();
+    document.getElementById("aiToggle").addEventListener("change", (e) => {
+        aiEnabled = e.target.checked;
     });
 
-    validateVerse();
+    registerAI();
 });
 
 function defaultVerseTemplate() {
@@ -41,90 +43,61 @@ using { /Fortnite.com/Devices }
 class MainDevice := creative_device:
 
     OnBegin<override>()<suspends> : void =
-        Print("Hello from Verse Web IDE!")`
+        `
 }
 
-function createProject() {
-    currentProject = document.getElementById("projectName").value || "MyVerseProject";
-    editor.setValue(defaultVerseTemplate());
+function registerAI() {
+    monaco.languages.registerInlineCompletionsProvider("verse", {
+        provideInlineCompletions: async (model, position) => {
+
+            if (!aiEnabled) return { items: [] };
+
+            const textBefore = model.getValueInRange({
+                startLineNumber: 1,
+                startColumn: 1,
+                endLineNumber: position.lineNumber,
+                endColumn: position.column
+            });
+
+            const suggestion = generateAISuggestion(textBefore);
+
+            if (!suggestion) return { items: [] };
+
+            return {
+                items: [{
+                    insertText: suggestion,
+                    range: {
+                        startLineNumber: position.lineNumber,
+                        startColumn: position.column,
+                        endLineNumber: position.lineNumber,
+                        endColumn: position.column
+                    }
+                }]
+            };
+        },
+        freeInlineCompletions: () => {}
+    });
 }
 
-function validateVerse() {
-    const code = editor.getValue();
-    const markers = [];
+function generateAISuggestion(context) {
 
-    const lines = code.split("\n");
+    // Basic smart patterns (replace with real AI later)
 
-    // Rule 1: Must have module
-    if (!code.includes("module")) {
-        markers.push({
-            message: "Missing module declaration.",
-            severity: monaco.MarkerSeverity.Error,
-            startLineNumber: 1,
-            startColumn: 1,
-            endLineNumber: 1,
-            endColumn: 1
-        });
+    if (context.trim().endsWith("OnBegin<override>()<suspends> : void =")) {
+        return `\n        Print("Game Started!")`;
     }
 
-    // Rule 2: Must have class
-    if (!code.includes("class")) {
-        markers.push({
-            message: "No class defined in project.",
-            severity: monaco.MarkerSeverity.Error,
-            startLineNumber: 1,
-            startColumn: 1,
-            endLineNumber: 1,
-            endColumn: 1
-        });
+    if (context.trim().endsWith("if")) {
+        return ` (Condition):\n        `;
     }
 
-    // Rule 3: Must have OnBegin override
-    if (!code.includes("OnBegin<override>")) {
-        markers.push({
-            message: "Missing required OnBegin<override>() function.",
-            severity: monaco.MarkerSeverity.Warning,
-            startLineNumber: 1,
-            startColumn: 1,
-            endLineNumber: 1,
-            endColumn: 1
-        });
+    if (context.includes("creative_device") && !context.includes("OnBegin")) {
+        return `\n\n    OnBegin<override>()<suspends> : void =\n        Print("Initialized")`;
     }
 
-    // Rule 4: Bracket matching
-    const openBrackets = (code.match(/{/g) || []).length;
-    const closeBrackets = (code.match(/}/g) || []).length;
-
-    if (openBrackets !== closeBrackets) {
-        markers.push({
-            message: "Unmatched curly brackets.",
-            severity: monaco.MarkerSeverity.Error,
-            startLineNumber: lines.length,
-            startColumn: 1,
-            endLineNumber: lines.length,
-            endColumn: 1
-        });
+    if (context.trim().endsWith("Print(")) {
+        return `"Hello World!")`;
     }
 
-    // Rule 5: Missing using
-    if (!code.includes("using")) {
-        markers.push({
-            message: "No using statement found.",
-            severity: monaco.MarkerSeverity.Warning,
-            startLineNumber: 1,
-            startColumn: 1,
-            endLineNumber: 1,
-            endColumn: 1
-        });
-    }
-
-    monaco.editor.setModelMarkers(editor.getModel(), "verse", markers);
-}
-
-function downloadProject() {
-    const blob = new Blob([editor.getValue()], { type: "text/plain" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = currentProject + ".verse";
-    link.click();
+    return "";
 }
