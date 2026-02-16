@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Verse UEFN Web IDE</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+</head>
+<body>
+
+  <div id="topbar">
+    <input id="projectName" placeholder="Project Name" />
+    <button onclick="createProject()">New Project</button>
+    <button onclick="downloadProject()">Download Project</button>
+  </div>
+
+  <div id="editor"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
